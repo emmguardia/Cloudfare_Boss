@@ -1,0 +1,11 @@
+apiVersion: v2
+name: cloudflared-master
+description: Cloudflare Tunnel master — route le trafic public de tous les sites via cloudflared
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - cloudflare
+  - tunnel
+  - cloudflared
+  - gateway

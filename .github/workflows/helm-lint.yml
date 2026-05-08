@@ -1,0 +1,65 @@
+# Lint + render du chart cloudflared-master
+# Pas d'image à build (on utilise cloudflare/cloudflared:latest publié par Cloudflare)
+# Le job échoue si :
+#   - le chart est invalide (helm lint)
+#   - le rendering casse (helm template)
+#   - un Secret en clair ou un token nu fuit dans charts/
+
+name: Helm lint
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: helm-lint-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: helm lint + template
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.15.0
+
+      - name: helm lint
+        run: helm lint charts/cloudflared-master
+
+      - name: helm template (dry-run)
+        run: helm template cloudflared-master charts/cloudflared-master > /tmp/rendered.yaml
+
+      # Garde-fou : aucun Secret en clair ne doit traîner dans charts/
+      # (les secrets vivent dans charts/.../secrets/ qui est gitignoré,
+      #  et le SealedSecret est chiffré donc safe).
+      - name: Vérifie l'absence de Secret nu
+        run: |
+          if grep -RIn --exclude-dir=secrets -E '^kind:\s*Secret\s*$' charts/; then
+            echo "::error::Secret Kubernetes en clair détecté dans charts/. Utilise un SealedSecret."
+            exit 1
+          fi
+
+      - name: Vérifie l'absence de tunnel token nu
+        run: |
+          # Les tokens Cloudflare commencent par "eyJhI" (base64 de '{"a":')
+          # Si on en trouve un hors du dossier secrets/ (gitignoré), c'est une fuite.
+          if grep -RIn --exclude-dir=secrets -E 'eyJhI[A-Za-z0-9+/=]{50,}' charts/ .github/ 2>/dev/null; then
+            echo "::error::Token Cloudflare en clair détecté. Doit être chiffré via SealedSecret."
+            exit 1
+          fi

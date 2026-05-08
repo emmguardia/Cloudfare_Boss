@@ -1,0 +1,26 @@
+# cloudflared-master (prod)
+# Tunnel Cloudflare central : route le trafic public de tous les sites
+# Le token tunnel est lu depuis le SealedSecret cloudflared-master-secrets
+namespace: cloudflare-gateway
+
+secretName: cloudflared-master-secrets
+
+cloudflared:
+  image: cloudflare/cloudflared:latest
+  imagePullPolicy: IfNotPresent
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  args:
+    - tunnel
+    - --no-autoupdate
+    - run
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "200m"
+      memory: "256Mi"

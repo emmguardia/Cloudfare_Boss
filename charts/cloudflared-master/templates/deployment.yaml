@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudflared-master
+  namespace: {{ include "cloudflared.namespace" . }}
+  labels:
+    {{- include "cloudflared.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.cloudflared.replicas }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      {{- toYaml .Values.cloudflared.strategy.rollingUpdate | nindent 6 }}
+  selector:
+    matchLabels:
+      app: cloudflared-master
+  template:
+    metadata:
+      labels:
+        app: cloudflared-master
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: cloudflared
+        image: {{ .Values.cloudflared.image }}
+        imagePullPolicy: {{ .Values.cloudflared.imagePullPolicy }}
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: ["ALL"]
+        args:
+          {{- toYaml .Values.cloudflared.args | nindent 8 }}
+        env:
+        - name: TUNNEL_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.secretName }}
+              key: tunnel-token
+        resources:
+          {{- toYaml .Values.cloudflared.resources | nindent 10 }}

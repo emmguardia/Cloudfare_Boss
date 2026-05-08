@@ -1,0 +1,25 @@
+# Application ArgoCD pour le tunnel Cloudflare master.
+# À appliquer une fois : kubectl apply -f argocd/cloudflared-master.yaml -n argocd
+# Ensuite ArgoCD se synchronise tout seul à chaque push sur main.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cloudflared-master
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/emmguardia/Cloudfare_Boss
+    targetRevision: main
+    path: charts/cloudflared-master
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cloudflare-gateway
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

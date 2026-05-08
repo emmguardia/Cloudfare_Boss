@@ -1,0 +1,10 @@
+# Plain secrets — JAMAIS commités. Seul le SealedSecret va sur GitHub.
+charts/cloudflared-master/secrets/*
+*.pem
+
+# OS / éditeurs
+.DS_Store
+*.log
+.claude/
+.idea/
+.vscode/
